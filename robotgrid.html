@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8"/>
+<title>Berpikir Komputasional: Robot Grid - </title>
+<style>
+  body{font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial;margin:20px;}
+  #grid{display:grid;grid-template-columns:repeat(7,50px);gap:2px;margin-bottom:10px;}
+  .cell{width:50px;height:50px;border:1px solid #ccc;display:flex;align-items:center;justify-content:center;}
+  .ob{background:#444;color:#fff;}
+  .goal{background:lightgreen;}
+  #controls button{margin:4px;}
+  #program{min-height:40px;border:1px dashed #aaa;padding:8px;}
+  .cmd{display:inline-block;padding:4px 6px;margin:2px;border-radius:4px;background:#efefef;border:1px solid #ddd;}
+  #hud{margin-top:12px;}
+</style>
+</head>
+<body>
+<h2>Berpikir Komputasional - Robot Grid</h2>
+<p>Atur perintah untuk mengantar robot (⚫) ke tujuan (🟢). Gunakan <code>Repeat(n)</code> untuk pengulangan sederhana.</p>
+
+<div id="grid"></div>
+
+<div id="palette">
+  <button data-cmd="forward">Forward</button>
+  <button data-cmd="left">Left</button>
+  <button data-cmd="right">Right</button>
+  <button id="repeat">Repeat(n)</button>
+  <button id="clear">Clear Program</button>
+</div>
+
+<h4>Program:</h4>
+<div id="program" aria-live="polite"></div>
+
+<div id="controls" style="margin-top:8px;">
+  <button id="run">Run</button>
+  <button id="step">Step</button>
+  <button id="undo">Undo</button>
+</div>
+
+<div id="hud"></div>
+
+<script>
+/* Simple grid & interpreter prototype */
+const rows=7, cols=7;
+const gridEl=document.getElementById('grid');
+let cells=[];
+let robot={r:6,c:0,dir:0}; // 0=up,1=right,2=down,3=left
+let program=[]; // array of commands or {type:'repeat',n,body:[]}
+let stepPointer={stack:[],pos:0}; // for stepping
+
+// sample obstacles and goal
+const obstacles=new Set(["3,2","2,4","4,4"]);
+const goal={r:0,c:6};
+
+function buildGrid(){
+  gridEl.innerHTML='';
+  cells=[];
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      const div=document.createElement('div');
+      div.className='cell';
+      if(obstacles.has(`${r},${c}`)){div.classList.add('ob'); div.textContent='X'}
+      if(r===goal.r && c===goal.c){div.classList.add('goal'); div.textContent='🟢'}
+      gridEl.appendChild(div);
+      cells.push(div);
+    }
+  }
+  renderRobot();
+}
+function renderRobot(){
+  // clear robot from cells
+  cells.forEach((cell,i)=>cell.dataset.robot='');
+  const idx=robot.r*cols+robot.c;
+  cells[idx].textContent = cells[idx].classList.contains('goal')? '🟢' : '⚫';
+}
+buildGrid();
+
+// palette
+document.querySelectorAll('#palette button[data-cmd]').forEach(b=>{
+  b.onclick=()=>{ program.push(b.dataset.cmd); renderProgram(); }
+});
+document.getElementById('repeat').onclick=()=>{
+  const n = parseInt(prompt("Repeat berapa kali? (angka)", "2"));
+  if(!n || n<1) return;
+  // simple: collect last N commands? Instead we ask user to input a short subprogram via prompt
+  const body = prompt("Masukkan urutan perintah dipisah koma (forward,left,right). Contoh: forward,forward,left","");
+  if(!body) return;
+  const arr = body.split(',').map(s=>s.trim()).filter(Boolean);
+  program.push({type:'repeat',n:n,body:arr});
+  renderProgram();
+}
+document.getElementById('clear').onclick=()=>{ program=[]; renderProgram(); }
+
+function renderProgram(){
+  const el=document.getElementById('program');
+  el.innerHTML='';
+  program.forEach((p,i)=>{
+    const span=document.createElement('span'); span.className='cmd';
+    span.textContent = (typeof p === 'string') ? p : `Repeat(${p.n}):[${p.body.join(',')}]`;
+    span.onclick = ()=>{ program.splice(i,1); renderProgram(); }
+    el.appendChild(span);
+  });
+}
+
+function resetRobot(){
+  robot={r:6,c:0,dir:0};
+  renderRobot();
+  document.getElementById('hud').textContent='';
+}
+
+function moveForward(){
+  let {r,c,dir} = robot;
+  let nr=r, nc=c;
+  if(dir===0) nr--;
+  if(dir===1) nc++;
+  if(dir===2) nr++;
+  if(dir===3) nc--;
+  if(nr<0||nr>=rows||nc<0||nc>=cols) return false;
+  if(obstacles.has(`${nr},${nc}`)) return false;
+  robot.r=nr; robot.c=nc;
+  return true;
+}
+
+function turnLeft(){ robot.dir=(robot.dir+3)%4; }
+function turnRight(){ robot.dir=(robot.dir+1)%4; }
+
+function executeProgram(arr){
+  resetRobot();
+  for(const cmd of arr){
+    if(typeof cmd === 'string'){
+      if(cmd==='forward'){ if(!moveForward()) { document.getElementById('hud').textContent='Tertabrak / luar grid — gagal'; return; } }
+      if(cmd==='left') turnLeft();
+      if(cmd==='right') turnRight();
+    } else if(cmd.type==='repeat'){
+      for(let i=0;i<cmd.n;i++){
+        for(const sub of cmd.body){
+          if(sub==='forward'){ if(!moveForward()) { document.getElementById('hud').textContent='Tertabrak di repeat — gagal'; return; } }
+          if(sub==='left') turnLeft();
+          if(sub==='right') turnRight();
+        }
+      }
+    }
+  }
+  renderRobot();
+  if(robot.r===goal.r && robot.c===goal.c){
+    document.getElementById('hud').textContent='BERHASIL! 🎉';
+  } else {
+    document.getElementById('hud').textContent='Program selesai, belum sampai tujuan.';
+  }
+}
+
+// run / step
+document.getElementById('run').onclick = ()=> executeProgram(program);
+
+// simple step: build flat instruction list and step through one by one
+function flattenProgram(arr){
+  const out=[];
+  for(const cmd of arr){
+    if(typeof cmd === 'string') out.push(cmd);
+    else if(cmd.type==='repeat') {
+      for(let i=0;i<cmd.n;i++) out.push(...cmd.body);
+    }
+  }
+  return out;
+}
+let stepList=[], stepIndex=0;
+document.getElementById('step').onclick=()=>{
+  if(stepIndex===0){
+    resetRobot();
+    stepList = flattenProgram(program);
+    stepIndex=0;
+    if(stepList.length===0){ document.getElementById('hud').textContent='Program kosong'; return; }
+  }
+  const cur = stepList[stepIndex];
+  if(cur==='forward'){ if(!moveForward()){ document.getElementById('hud').textContent='Tertabrak / keluar grid — gagal step'; stepIndex=0; return; } }
+  if(cur==='left') turnLeft();
+  if(cur==='right') turnRight();
+  renderRobot();
+  stepIndex++;
+  if(stepIndex>=stepList.length){
+    if(robot.r===goal.r && robot.c===goal.c) document.getElementById('hud').textContent='BERHASIL! 🎉 (step)';
+    else document.getElementById('hud').textContent='Selesai (step) — belum sampai tujuan.';
+    stepIndex=0;
+  } else {
+    document.getElementById('hud').textContent=`Step ${stepIndex}/${stepList.length}`;
+  }
+}
+
+document.getElementById('undo').onclick = ()=>{
+  program.pop(); renderProgram();
+}
+renderProgram();
+</script>
+</body>
+</html>
