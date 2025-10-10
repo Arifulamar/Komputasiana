@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Robot Grid — Berpikir Komputasional</title>
+<style>
+  :root {
+    --primary: #2563eb;
+    --bg: #f9fafb;
+    --border: #d1d5db;
+  }
+  body {
+    font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    margin: 0;
+    padding: 1rem;
+  }
+  h2 {
+    text-align: center;
+    margin-bottom: 0.2rem;
+  }
+  p {
+    text-align: center;
+    font-size: 0.95rem;
+    color: #444;
+  }
+  #game-container {
+    max-width: 600px;
+    margin: 1rem auto;
+    text-align: center;
+  }
+  #grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    margin: 10px auto;
+    max-width: 90vw;
+  }
+  .cell {
+    aspect-ratio: 1/1;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(1.2rem, 3vw, 2rem);
+    background: white;
+    user-select: none;
+  }
+  .ob {
+    background: #374151;
+    color: white;
+  }
+  .goal {
+    background: lightgreen;
+  }
+  #palette, #controls {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  button {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 8px;
+    background: var(--primary);
+    color: white;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+  button:hover {
+    background: #1e40af;
+  }
+  #program {
+    min-height: 40px;
+    border: 1px dashed #aaa;
+    padding: 6px;
+    margin: 10px auto;
+    background: #fff;
+    max-width: 90vw;
+  }
+  .cmd {
+    display: inline-block;
+    background: #e5e7eb;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 4px 6px;
+    margin: 2px;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+  #hud {
+    margin-top: 12px;
+    font-weight: 500;
+    color: #1f2937;
+  }
+</style>
+</head>
+<body>
+
+<h2>🤖 Robot Grid — Algoritma</h2>
+<p>Susun perintah untuk membawa robot ke tujuan 🟢. Gunakan <code>Repeat(n)</code> untuk perulangan sederhana.</p>
+
+<div id="game-container">
+  <div id="grid"></div>
+
+  <div id="palette">
+    <button data-cmd="forward">Forward</button>
+    <button data-cmd="left">Left</button>
+    <button data-cmd="right">Right</button>
+    <button id="repeat">Repeat(n)</button>
+    <button id="clear">Clear</button>
+  </div>
+
+  <h4>Program:</h4>
+  <div id="program"></div>
+
+  <div id="controls">
+    <button id="run">Run</button>
+    <button id="step">Step</button>
+    <button id="undo">Undo</button>
+  </div>
+
+  <div id="hud"></div>
+</div>
+
+<script>
+const rows=7, cols=7;
+const gridEl=document.getElementById('grid');
+let cells=[];
+let robot={r:6,c:0,dir:0}; // 0=up,1=right,2=down,3=left
+let program=[];
+
+// sample obstacles & goal
+const obstacles=new Set(["3,2","2,4","4,4"]);
+const goal={r:0,c:6};
+
+function buildGrid(){
+  gridEl.innerHTML='';
+  cells=[];
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      const div=document.createElement('div');
+      div.className='cell';
+      if(obstacles.has(`${r},${c}`)){div.classList.add('ob');div.textContent='X';}
+      if(r===goal.r && c===goal.c){div.classList.add('goal');div.textContent='🟢';}
+      gridEl.appendChild(div);
+      cells.push(div);
+    }
+  }
+  renderRobot();
+}
+
+function renderRobot(){
+  // Hapus isi lama
+  cells.forEach((cell,i)=>{
+    if(!cell.classList.contains('goal') && !cell.classList.contains('ob')){
+      cell.textContent='';
+    }
+  });
+  const idx=robot.r*cols+robot.c;
+  const arrows=['↑','→','↓','←'];
+  cells[idx].textContent=cells[idx].classList.contains('goal')?'🟢':arrows[robot.dir];
+}
+buildGrid();
+
+// Tambah command ke program
+document.querySelectorAll('#palette button[data-cmd]').forEach(b=>{
+  b.onclick=()=>{ program.push(b.dataset.cmd); renderProgram(); }
+});
+document.getElementById('repeat').onclick=()=>{
+  const n=parseInt(prompt("Repeat berapa kali? (angka)", "2"));
+  if(!n||n<1)return;
+  const body=prompt("Masukkan urutan perintah (forward,left,right) dipisah koma:", "forward,right");
+  if(!body)return;
+  const arr=body.split(',').map(s=>s.trim()).filter(Boolean);
+  program.push({type:'repeat',n:n,body:arr});
+  renderProgram();
+};
+document.getElementById('clear').onclick=()=>{ program=[]; renderProgram(); }
+
+function renderProgram(){
+  const el=document.getElementById('program');
+  el.innerHTML='';
+  program.forEach((p,i)=>{
+    const span=document.createElement('span');
+    span.className='cmd';
+    span.textContent=typeof p==='string'?p:`Repeat(${p.n})[${p.body.join(',')}]`;
+    span.onclick=()=>{ program.splice(i,1); renderProgram(); };
+    el.appendChild(span);
+  });
+}
+
+// Kontrol robot
+function resetRobot(){
+  robot={r:6,c:0,dir:0};
+  renderRobot();
+  document.getElementById('hud').textContent='';
+}
+function moveForward(){
+  let {r,c,dir}=robot;
+  let nr=r, nc=c;
+  if(dir===0)nr--;
+  if(dir===1)nc++;
+  if(dir===2)nr++;
+  if(dir===3)nc--;
+  if(nr<0||nr>=rows||nc<0||nc>=cols)return false;
+  if(obstacles.has(`${nr},${nc}`))return false;
+  robot.r=nr;robot.c=nc;
+  return true;
+}
+function turnLeft(){ robot.dir=(robot.dir+3)%4; }
+function turnRight(){ robot.dir=(robot.dir+1)%4; }
+
+function executeProgram(arr){
+  resetRobot();
+  for(const cmd of arr){
+    if(typeof cmd==='string'){
+      if(cmd==='forward'){ if(!moveForward()){ hud.textContent='❌ Tertabrak / keluar grid'; renderRobot(); return; } }
+      if(cmd==='left')turnLeft();
+      if(cmd==='right')turnRight();
+    } else if(cmd.type==='repeat'){
+      for(let i=0;i<cmd.n;i++){
+        for(const sub of cmd.body){
+          if(sub==='forward'){ if(!moveForward()){ hud.textContent='❌ Gagal di repeat'; renderRobot(); return; } }
+          if(sub==='left')turnLeft();
+          if(sub==='right')turnRight();
+        }
+      }
+    }
+    renderRobot();
+  }
+  if(robot.r===goal.r && robot.c===goal.c) hud.textContent='🎉 Berhasil!';
+  else hud.textContent='Program selesai, belum sampai tujuan.';
+}
+document.getElementById('run').onclick=()=>executeProgram(program);
+
+// Step by step
+function flattenProgram(arr){
+  const out=[];
+  for(const cmd of arr){
+    if(typeof cmd==='string')out.push(cmd);
+    else if(cmd.type==='repeat')for(let i=0;i<cmd.n;i++)out.push(...cmd.body);
+  }
+  return out;
+}
+let stepList=[], stepIndex=0;
+const hud=document.getElementById('hud');
+document.getElementById('step').onclick=()=>{
+  if(stepIndex===0){
+    resetRobot();
+    stepList=flattenProgram(program);
+    if(stepList.length===0){hud.textContent='Program kosong';return;}
+  }
+  const cur=stepList[stepIndex];
+  if(cur==='forward'){ if(!moveForward()){ hud.textContent='❌ Tertabrak'; stepIndex=0; renderRobot(); return; } }
+  if(cur==='left')turnLeft();
+  if(cur==='right')turnRight();
+  renderRobot();
+  stepIndex++;
+  if(stepIndex>=stepList.length){
+    hud.textContent=robot.r===goal.r&&robot.c===goal.c?'🎉 Sukses!':'Selesai, belum sampai tujuan';
+    stepIndex=0;
+  } else hud.textContent=`Langkah ${stepIndex}/${stepList.length}`;
+};
+document.getElementById('undo').onclick=()=>{ program.pop(); renderProgram(); };
+renderProgram();
+</script>
+
+</body>
+</html>

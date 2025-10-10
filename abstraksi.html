@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Game Abstraksi — Berpikir Komputasional</title>
+<style>
+  body {
+    font-family: system-ui, Segoe UI, Roboto, sans-serif;
+    background: #f9fafb;
+    margin: 1rem;
+    color: #222;
+    text-align: center;
+  }
+  h2 { font-size: clamp(1.3rem, 3vw, 1.8rem); }
+  p { font-size: clamp(0.9rem, 2vw, 1rem); }
+
+  #items {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    margin: 1.2rem 0;
+  }
+  .item {
+    font-size: clamp(2rem, 6vw, 3rem);
+    background: white;
+    padding: 1rem;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+
+  #choices {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 1rem;
+  }
+  button {
+    padding: 8px 16px;
+    font-size: clamp(0.9rem, 2vw, 1rem);
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    background: white;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+  button:hover { background: #e5e7eb; }
+
+  #feedback {
+    margin-top: 1rem;
+    font-weight: bold;
+    font-size: clamp(1rem, 2.5vw, 1.3rem);
+  }
+
+  #next {
+    margin-top: 1.5rem;
+    padding: 8px 20px;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: clamp(0.9rem, 2vw, 1rem);
+    cursor: pointer;
+  }
+  #next:hover { background: #2563eb; }
+</style>
+</head>
+<body>
+<h2>🧠 Game Abstraksi</h2>
+<p>Pilih kategori umum (abstraksi) yang mewakili semua objek di bawah ini.</p>
+
+<div id="items"></div>
+<div id="choices"></div>
+<div id="feedback"></div>
+<button id="next">Next</button>
+
+<script>
+const data = [
+  { items: ["🍎","🍌","🍊"], answer: "Buah", options: ["Buah","Kendaraan","Hewan","Baju"] },
+  { items: ["🚗","🚌","🚕"], answer: "Kendaraan", options: ["Buah","Kendaraan","Perabot","Alat Musik"] },
+  { items: ["🐶","🐱","🐰"], answer: "Hewan", options: ["Bunga","Makanan","Hewan","Profesi"] },
+  { items: ["🎸","🎹","🥁"], answer: "Alat Musik", options: ["Buah","Alat Musik","Kendaraan","Minuman"] },
+  { items: ["👕","👖","👗"], answer: "Pakaian", options: ["Pakaian","Makanan","Tanaman","Kendaraan"] },
+  { items: ["🌻","🌹","🌷"], answer: "Bunga", options: ["Bunga","Buah","Hewan","Makanan"] },
+];
+
+let current = 0;
+
+const itemsEl = document.getElementById('items');
+const choicesEl = document.getElementById('choices');
+const feedbackEl = document.getElementById('feedback');
+const nextBtn = document.getElementById('next');
+
+function renderQuestion(){
+  const q = data[current];
+  itemsEl.innerHTML = '';
+  feedbackEl.textContent = '';
+
+  q.items.forEach(i=>{
+    const div = document.createElement('div');
+    div.className = 'item';
+    div.textContent = i;
+    itemsEl.appendChild(div);
+  });
+
+  choicesEl.innerHTML = '';
+  q.options.forEach(opt=>{
+    const btn = document.createElement('button');
+    btn.textContent = opt;
+    btn.onclick = ()=>checkAnswer(opt);
+    choicesEl.appendChild(btn);
+  });
+}
+
+function checkAnswer(choice){
+  const q = data[current];
+  if(choice === q.answer){
+    feedbackEl.textContent = "✅ Benar! Itu kategori yang tepat.";
+  } else {
+    feedbackEl.textContent = "❌ Salah. Coba pikirkan ciri umum dari semua objek.";
+  }
+}
+
+nextBtn.onclick = ()=>{
+  current = (current + 1) % data.length;
+  renderQuestion();
+}
+
+renderQuestion();
+</script>
+</body>
+</html>

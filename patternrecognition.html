@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pattern Recognition Game</title>
+<style>
+  :root {
+    --cell-size: min(16vw, 70px);
+  }
+  body {
+    font-family: system-ui, Segoe UI, Roboto, sans-serif;
+    background: #fafafa;
+    color: #222;
+    margin: 1rem;
+    text-align: center;
+  }
+  h2 { font-size: clamp(1.2rem, 3vw, 1.8rem); }
+  #pattern, #choices {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 1rem auto;
+  }
+  .cell {
+    width: var(--cell-size);
+    height: var(--cell-size);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(1.2rem, 5vw, 2rem);
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.2s;
+  }
+  .cell:hover { transform: scale(1.1); }
+  .color1 { background: #f87171; } /* merah */
+  .color2 { background: #4ade80; } /* hijau */
+  .color3 { background: #60a5fa; } /* biru */
+  .color4 { background: #facc15; } /* kuning */
+  #feedback {
+    margin-top: 1rem;
+    font-weight: bold;
+    font-size: clamp(1rem, 2.5vw, 1.3rem);
+  }
+  #next {
+    margin-top: 1rem;
+    padding: 8px 16px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    font-size: clamp(0.9rem, 2vw, 1rem);
+  }
+  #next:hover { background: #eee; }
+</style>
+</head>
+<body>
+<h2>🎨 Pattern Recognition Game</h2>
+<p>Amati urutan pola, lalu pilih elemen berikutnya yang benar!</p>
+
+<div id="pattern"></div>
+
+<h4>Pilih pola selanjutnya:</h4>
+<div id="choices"></div>
+
+<div id="feedback"></div>
+<button id="next">Next Pattern</button>
+
+<script>
+const patternEl = document.getElementById('pattern');
+const choicesEl = document.getElementById('choices');
+const feedbackEl = document.getElementById('feedback');
+const nextBtn = document.getElementById('next');
+
+const colors = ['color1','color2','color3','color4'];
+let currentPattern = [];
+let correctNext = '';
+
+function generatePattern(){
+  // reset
+  feedbackEl.textContent = '';
+  patternEl.innerHTML = '';
+  choicesEl.innerHTML = '';
+
+  // buat pola sederhana berulang 2 warna atau lebih
+  const len = Math.floor(Math.random()*2)+3; // 3-4 elemen awal
+  const patternColors = shuffle(colors).slice(0,Math.floor(Math.random()*2)+2);
+  currentPattern=[];
+  for(let i=0;i<len;i++){
+    const c = patternColors[i % patternColors.length];
+    currentPattern.push(c);
+  }
+
+  // tampilkan pola
+  currentPattern.forEach(c=>{
+    const div=document.createElement('div');
+    div.className=`cell ${c}`;
+    patternEl.appendChild(div);
+  });
+
+  // tentukan warna berikutnya yang benar
+  correctNext = patternColors[len % patternColors.length];
+
+  // tampilkan pilihan acak
+  const options = shuffle([...colors]).slice(0,3);
+  if(!options.includes(correctNext)) options[Math.floor(Math.random()*options.length)] = correctNext;
+  options.forEach(c=>{
+    const div=document.createElement('div');
+    div.className=`cell ${c}`;
+    div.onclick=()=>checkAnswer(c);
+    choicesEl.appendChild(div);
+  });
+}
+
+function checkAnswer(choice){
+  if(choice===correctNext){
+    feedbackEl.textContent='✅ Benar! Pola berlanjut dengan warna itu.';
+  } else {
+    feedbackEl.textContent='❌ Salah. Coba perhatikan ulang pola sebelumnya.';
+  }
+}
+
+function shuffle(arr){ return arr.sort(()=>Math.random()-0.5); }
+
+nextBtn.onclick=generatePattern;
+generatePattern();
+</script>
+</body>
+</html>

@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Game Dekomposisi Responsif</title>
+<style>
+  :root {
+    --blue-light: #e3f2fd;
+    --blue-border: #90caf9;
+    --green-light: #c8e6c9;
+    --red-light: #ffcdd2;
+  }
+
+  body {
+    font-family: "Segoe UI", Roboto, sans-serif;
+    background: #f6f8fa;
+    margin: 20px;
+    padding: 0;
+    color: #333;
+  }
+
+  h2 { text-align: center; }
+
+  #container {
+    display: flex;
+    gap: 30px;
+    justify-content: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .task, .dropzone {
+    border: 2px dashed #ccc;
+    border-radius: 10px;
+    background: #fff;
+    padding: 10px;
+    min-width: 220px;
+    flex: 1;
+    max-width: 400px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  .step {
+    padding: 10px;
+    margin: 6px 0;
+    background: var(--blue-light);
+    border: 1px solid var(--blue-border);
+    border-radius: 6px;
+    cursor: grab;
+    font-size: 1rem;
+    text-align: center;
+    transition: transform 0.1s;
+  }
+
+  .step:active { transform: scale(0.97); }
+
+  .dropzone p {
+    text-align: center;
+    color: #777;
+    font-style: italic;
+  }
+
+  .correct { background: var(--green-light); }
+  .wrong { background: var(--red-light); }
+
+  button {
+    display: block;
+    margin: 15px auto;
+    padding: 10px 20px;
+    font-size: 1rem;
+    background: #2196f3;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  button:hover { background: #1976d2; }
+
+  #result {
+    text-align: center;
+    font-weight: 600;
+    margin-top: 10px;
+  }
+
+  /* 📱 Responsif untuk layar kecil */
+  @media (max-width: 768px) {
+    body { margin: 10px; }
+    #container { flex-direction: column; align-items: stretch; }
+    .task, .dropzone { width: 100%; max-width: none; }
+    .step { font-size: 1rem; padding: 12px; }
+    button { width: 100%; font-size: 1.1rem; }
+  }
+
+  @media (max-width: 480px) {
+    h2 { font-size: 1.2rem; }
+    .step { font-size: 0.95rem; }
+  }
+</style>
+</head>
+<body>
+
+<h2>🧩 Game Dekomposisi: Susun Urutan Tugas!</h2>
+<p style="text-align:center"><b>Tugas besar:</b> "Merakit Robot"</p>
+<p style="text-align:center">Seret langkah-langkah berikut ke urutan yang logis!</p>
+
+<div id="container">
+  <div class="task" id="steps">
+    <div class="step" draggable="true">Pasang kaki</div>
+    <div class="step" draggable="true">Pasang baterai</div>
+    <div class="step" draggable="true">Pasang kepala</div>
+    <div class="step" draggable="true">Uji robot berjalan</div>
+  </div>
+
+  <div class="dropzone" id="order">
+    <p>⬇️ Seret langkah ke sini ⬇️</p>
+  </div>
+</div>
+
+<button id="check">Periksa Urutan</button>
+<p id="result"></p>
+
+<script>
+const steps=document.querySelectorAll('.step');
+const order=document.getElementById('order');
+const result=document.getElementById('result');
+let dragged=null;
+
+// drag and drop events
+steps.forEach(s=>{
+  s.addEventListener('dragstart',()=>{ dragged=s; });
+});
+
+order.addEventListener('dragover',e=>e.preventDefault());
+order.addEventListener('drop',e=>{
+  e.preventDefault();
+  if(dragged){ order.appendChild(dragged); dragged=null; }
+});
+
+document.getElementById('check').onclick=()=>{
+  const correctOrder=["Pasang kaki","Pasang baterai","Pasang kepala","Uji robot berjalan"];
+  const placed=[...order.querySelectorAll('.step')].map(s=>s.textContent.trim());
+  if(JSON.stringify(placed)===JSON.stringify(correctOrder)){
+    order.classList.add('correct'); order.classList.remove('wrong');
+    result.textContent="✅ Benar! Kamu berhasil melakukan dekomposisi dan urutan logis!";
+  } else {
+    order.classList.add('wrong'); order.classList.remove('correct');
+    result.textContent="❌ Belum tepat. Coba cek urutannya lagi!";
+  }
+};
+</script>
+
+</body>
+</html>
